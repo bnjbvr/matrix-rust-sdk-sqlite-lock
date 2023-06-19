@@ -73,7 +73,9 @@ impl Drop for CloseChildGuard {
 }
 
 async fn parent_main(path: &Path, write_pipe: i32) -> Result<()> {
-    let store = SqliteCryptoStore::open(path, None).await?.into_crypto_store();
+    let store = SqliteCryptoStore::open(path, None)
+        .await?
+        .into_crypto_store();
     let lock_key = LOCK_KEY.to_string();
 
     let _close_child_guard = CloseChildGuard { write_pipe };
@@ -81,7 +83,9 @@ async fn parent_main(path: &Path, write_pipe: i32) -> Result<()> {
     let mut generation = 0;
 
     // Set initial generation to 0.
-    store.set_custom_value(GENERATION_KEY, vec![generation]).await?;
+    store
+        .set_custom_value(GENERATION_KEY, vec![generation])
+        .await?;
 
     let mut lock = CryptoStoreLock::new(store.clone(), lock_key.clone(), "parent".to_owned(), None);
 
@@ -119,9 +123,10 @@ async fn parent_main(path: &Path, write_pipe: i32) -> Result<()> {
             // Compete with the child to take the lock!
             lock.lock().await?;
 
-            let read_generation =
-                store.get_custom_value(GENERATION_KEY).await?.expect("there's always a generation")
-                    [0];
+            let read_generation = store
+                .get_custom_value(GENERATION_KEY)
+                .await?
+                .expect("there's always a generation")[0];
 
             // Check that if we've seen the latest result, based on the generation number
             // (any write to the generation indicates somebody else wrote to the
@@ -148,7 +153,9 @@ async fn parent_main(path: &Path, write_pipe: i32) -> Result<()> {
 }
 
 async fn child_main(path: &Path, read_pipe: i32) -> Result<()> {
-    let store = SqliteCryptoStore::open(path, None).await?.into_crypto_store();
+    let store = SqliteCryptoStore::open(path, None)
+        .await?
+        .into_crypto_store();
     let lock_key = LOCK_KEY.to_string();
 
     let mut lock = CryptoStoreLock::new(store.clone(), lock_key.clone(), "child".to_owned(), None);
@@ -167,7 +174,9 @@ async fn child_main(path: &Path, read_pipe: i32) -> Result<()> {
 
                 let generation = store.get_custom_value(GENERATION_KEY).await?.unwrap()[0];
                 let generation = generation.wrapping_add(1);
-                store.set_custom_value(GENERATION_KEY, vec![generation]).await?;
+                store
+                    .set_custom_value(GENERATION_KEY, vec![generation])
+                    .await?;
 
                 lock.unlock().await?;
             }
@@ -179,13 +188,20 @@ async fn child_main(path: &Path, read_pipe: i32) -> Result<()> {
 
                 eprintln!("child got the lock");
 
-                let val = store.get_custom_value(KEY).await?.expect("missing value in child");
+                let val = store
+                    .get_custom_value(KEY)
+                    .await?
+                    .expect("missing value in child");
                 assert_eq!(val, expected.as_bytes());
 
                 store.remove_custom_value(KEY).await?;
 
-                let generation = store.get_custom_value(GENERATION_KEY).await?.unwrap()[0];
-                store.set_custom_value(GENERATION_KEY, vec![generation + 1]).await?;
+                let generation =
+                    store.get_custom_value(GENERATION_KEY).await?.unwrap()[0].wrapping_add(1);
+
+                store
+                    .set_custom_value(GENERATION_KEY, vec![generation])
+                    .await?;
 
                 lock.unlock().await?;
             }
