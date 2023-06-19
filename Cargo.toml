@@ -1,0 +1,13 @@
+[package]
+name = "sqlite-lock"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.71"
+futures = "0.3.28"
+matrix-sdk-crypto = { path = "../matrix-rust-sdk/crates/matrix-sdk-crypto" }
+matrix-sdk-sqlite = { path = "../matrix-rust-sdk/crates/matrix-sdk-sqlite", features = ["crypto-store"] }
+nix = "0.26.2"
+speedy = "0.8.6"
+tokio = { version = "1.28.2", features = ["rt", "rt-multi-thread"] }
